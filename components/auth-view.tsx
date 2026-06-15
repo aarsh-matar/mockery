@@ -1,6 +1,3 @@
-Here is the fully updated `auth-view.tsx` file with all traces of the mobile number completely removed. You can copy and paste this directly over your current file.
-
-```tsx
 "use client"
 
 import { useState, useCallback } from "react"
