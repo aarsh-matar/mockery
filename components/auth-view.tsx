@@ -1,3 +1,6 @@
+Here is the fully updated `auth-view.tsx` file with all traces of the mobile number completely removed. You can copy and paste this directly over your current file.
+
+```tsx
 "use client"
 
 import { useState, useCallback } from "react"
@@ -24,7 +27,6 @@ export function AuthView({ onAuth }: AuthViewProps) {
   // Sign up fields
   const [name, setName]         = useState("")
   const [username, setUsername] = useState("")
-  const [mobile, setMobile]     = useState("")
   const [password, setPassword] = useState("")
 
   // Sign in fields
@@ -36,8 +38,8 @@ export function AuthView({ onAuth }: AuthViewProps) {
 
   const handleSignUp = useCallback(async () => {
     setError(null)
-    if (!name.trim() || !username.trim() || !password || !mobile.trim()) {
-      setError("Name, username, mobile number, and password are required.")
+    if (!name.trim() || !username.trim() || !password) {
+      setError("Name, username, and password are required.")
       return
     }
     if (username.includes(" ")) {
@@ -69,7 +71,6 @@ export function AuthView({ onAuth }: AuthViewProps) {
           data: {
             name:     name.trim(),
             username: username.toLowerCase().trim(),
-            mobile:   mobile.trim(),
           },
         },
       })
@@ -88,7 +89,7 @@ export function AuthView({ onAuth }: AuthViewProps) {
     } finally {
       setLoading(false)
     }
-  }, [name, username, mobile, password, supabase, onAuth])
+  }, [name, username, password, supabase, onAuth])
 
   const handleSignIn = useCallback(async () => {
     setError(null)
@@ -198,17 +199,6 @@ export function AuthView({ onAuth }: AuthViewProps) {
               </div>
 
               <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground">Mobile Number <span className="text-destructive">*</span></label>
-                <input
-                  type="tel"
-                  value={mobile}
-                  onChange={e => setMobile(e.target.value)}
-                  placeholder="9876543210"
-                  className="h-11 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-ring/20"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Password <span className="text-destructive">*</span></label>
                 <div className="relative">
                   <input
@@ -296,3 +286,5 @@ export function AuthView({ onAuth }: AuthViewProps) {
     </div>
   )
 }
+
+```
