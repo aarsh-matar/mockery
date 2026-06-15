@@ -36,8 +36,8 @@ export function AuthView({ onAuth }: AuthViewProps) {
 
   const handleSignUp = useCallback(async () => {
     setError(null)
-    if (!name.trim() || !username.trim() || !password) {
-      setError("Name, username and password are required.")
+    if (!name.trim() || !username.trim() || !password || !mobile.trim()) {
+      setError("Name, username, mobile number, and password are required.")
       return
     }
     if (username.includes(" ")) {
@@ -198,7 +198,7 @@ export function AuthView({ onAuth }: AuthViewProps) {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Mobile Number</label>
+              <label className="text-sm font-medium text-foreground">Mobile Number <span className="text-destructive">*</span></label>
                 <input
                   type="tel"
                   value={mobile}
