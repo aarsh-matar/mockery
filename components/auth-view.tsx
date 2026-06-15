@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
 interface AuthViewProps {
-  onAuth: (user: { name: string; username: string }) => void
+  onAuth: (user: { name: string; username: string; id: string }) => void
 }
 
 type Mode = "signin" | "signup"
@@ -80,6 +80,7 @@ export function AuthView({ onAuth }: AuthViewProps) {
         onAuth({
           name:     name.trim(),
           username: username.toLowerCase().trim(),
+          id:       data.user.id,
         })
       }
     } catch (err: any) {
@@ -114,10 +115,11 @@ export function AuthView({ onAuth }: AuthViewProps) {
           .eq("id", data.user.id)
           .single()
 
-        onAuth({
-          name:     profile?.name     ?? "Student",
-          username: profile?.username ?? loginUsername,
-        })
+          onAuth({
+            name:     profile?.name     ?? "Student",
+            username: profile?.username ?? loginUsername,
+            id:       data.user.id,
+          })
       }
     } catch (err: any) {
       setError(err.message ?? "Something went wrong.")

@@ -15,15 +15,16 @@ type View = "dashboard" | "library" | "analytics" | "review"
 interface UserProfile {
   name: string
   username: string
+  id: string
 }
 
 export default function Page() {
-  const [view, setView]             = useState<View>("dashboard")
-  const [activeTest, setActiveTest] = useState<string>("Mock-1")
-  const [testResult, setTestResult] = useState<TestResult | null>(null)
-  const [allResults, setAllResults] = useState<Record<string, TestResult>>({})
-  const [dark, setDark]             = useState(false)
-  const [user, setUser]             = useState<UserProfile | null>(null)
+  const [view, setView]               = useState<View>("dashboard")
+  const [activeTest, setActiveTest]   = useState<string>("Mock-1")
+  const [testResult, setTestResult]   = useState<TestResult | null>(null)
+  const [allResults, setAllResults]   = useState<Record<string, TestResult>>({})
+  const [dark, setDark]               = useState(false)
+  const [user, setUser]               = useState<UserProfile | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
 
   // Loading bar
@@ -45,6 +46,42 @@ export default function Page() {
     else      { document.documentElement.classList.remove("dark"); localStorage.setItem("theme", "light") }
   }, [dark])
 
+  // ── Load past results from Supabase ─────────────────────────
+  const loadResults = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("test_results")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error || !data) return
+
+    // Build allResults — keep only the latest result per testId
+    const results: Record<string, TestResult> = {}
+    for (const row of data) {
+      if (!results[row.test_id]) {
+        results[row.test_id] = {
+          testId: row.test_id,
+          totalScore: row.total_score,
+          maxScore: row.max_score,
+          sections: row.sections,
+        }
+      }
+    }
+    setAllResults(results)
+  }
+
+  // ── Save result to Supabase ──────────────────────────────────
+  const saveResult = async (userId: string, result: TestResult) => {
+    await supabase.from("test_results").insert({
+      user_id:     userId,
+      test_id:     result.testId,
+      total_score: result.totalScore,
+      max_score:   result.maxScore,
+      sections:    result.sections,
+    })
+  }
+
   // ── Check existing session on load ───────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -54,7 +91,13 @@ export default function Page() {
           .select("name, username")
           .eq("id", session.user.id)
           .single()
-        setUser({ name: profile?.name ?? "Student", username: profile?.username ?? "" })
+        const userProfile = {
+          name:     profile?.name ?? "Student",
+          username: profile?.username ?? "",
+          id:       session.user.id,
+        }
+        setUser(userProfile)
+        await loadResults(session.user.id)
       }
       setAuthLoading(false)
     })
@@ -86,17 +129,20 @@ export default function Page() {
         setActiveTest(testId)
         setTestResult(result)
         setAllResults(prev => ({ ...prev, [testId]: result }))
+        // Save to Supabase if logged in
+        if (user?.id) {
+          saveResult(user.id, result)
+        }
         navigateTo("analytics")
         window.focus()
       }
     }
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
-  }, [])
+  }, [user])
 
   const startTest = (testId: string) => {
     if (!user) {
-      // Not logged in — bounce to auth
       navigateTo("dashboard")
       return
     }
@@ -115,14 +161,16 @@ export default function Page() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     setUser(null)
+    setAllResults({})
     setView("dashboard")
   }
 
-  const handleAuth = (profile: UserProfile) => {
+  const handleAuth = async (profile: UserProfile) => {
     setUser(profile)
+    await loadResults(profile.id)
   }
 
-  // ── Loading state while checking session ─────────────────────
+  // ── Loading state ─────────────────────────────────────────────
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -135,11 +183,10 @@ export default function Page() {
     )
   }
 
-  // ── Not logged in — show auth screen ─────────────────────────
+  // ── Not logged in ─────────────────────────────────────────────
   if (!user) {
     return (
       <div className="relative">
-        {/* Dark mode toggle even on auth screen */}
         <button
           onClick={() => setDark(d => !d)}
           aria-label="Toggle dark mode"
@@ -182,13 +229,10 @@ export default function Page() {
         <span className="text-lg font-semibold tracking-tight text-foreground">Mockery</span>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* User pill */}
           <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5">
             <User className="size-3.5 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">{user.username}</span>
           </div>
-
-          {/* Dark mode */}
           <button
             onClick={() => setDark(d => !d)}
             aria-label="Toggle dark mode"
@@ -196,8 +240,6 @@ export default function Page() {
           >
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
-
-          {/* Sign out */}
           <button
             onClick={handleSignOut}
             aria-label="Sign out"
@@ -210,7 +252,7 @@ export default function Page() {
 
       {/* Views */}
       <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {view === "dashboard" && (
+        {view === "dashboard" && (
           <DashboardView
             onGoToMockTests={() => navigateTo("library")}
             userName={user.username}
