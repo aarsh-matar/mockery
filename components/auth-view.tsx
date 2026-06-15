@@ -283,5 +283,3 @@ export function AuthView({ onAuth }: AuthViewProps) {
     </div>
   )
 }
-
-```
